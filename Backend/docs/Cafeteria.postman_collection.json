@@ -1,0 +1,215 @@
+{
+  "info": {
+    "name": "Cafeteria API",
+    "_postman_id": "c8a3f3a0-cafe-4eca-b1f6-cafeteria-api",
+    "description": "Coleção completa da API da Cafeteria. Use o ambiente para definir {{baseUrl}}, {{accessToken}}, {{refreshToken}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",      "value": "http://localhost:8080" },
+    { "key": "accessToken",  "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "productId",    "value": "" },
+    { "key": "orderId",      "value": "" },
+    { "key": "categoryId",   "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{accessToken}}", "type": "string" } ]
+  },
+  "item": [
+    {
+      "name": "Autenticação",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Novo Usuario\",\n  \"email\": \"novo@cafeteria.com\",\n  \"password\": \"Senha@123\"\n}" }
+          }
+        },
+        {
+          "name": "Login (admin seed)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('accessToken',  json.accessToken);",
+              "pm.collectionVariables.set('refreshToken', json.refreshToken);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@cafeteria.com\",\n  \"password\": \"Admin@123\"\n}" }
+          }
+        },
+        {
+          "name": "Login (cliente seed)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('accessToken',  json.accessToken);",
+              "pm.collectionVariables.set('refreshToken', json.refreshToken);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"cliente@cafeteria.com\",\n  \"password\": \"Cliente@123\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/auth/logout",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catálogo (público)",
+      "item": [
+        { "name": "Listar produtos", "request": { "method": "GET", "url": "{{baseUrl}}/api/products?page=0&size=20" } },
+        { "name": "Buscar por categoria", "request": { "method": "GET", "url": "{{baseUrl}}/api/products?category=cafes" } },
+        { "name": "Detalhe do produto", "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}" } },
+        { "name": "Listar categorias", "request": { "method": "GET", "url": "{{baseUrl}}/api/categories" } },
+        { "name": "Reviews do produto",  "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}/reviews" } }
+      ]
+    },
+    {
+      "name": "Carrinho",
+      "item": [
+        { "name": "Meu carrinho", "request": { "method": "GET", "url": "{{baseUrl}}/api/cart" } },
+        {
+          "name": "Adicionar item",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/cart/items",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 2\n}" }
+          }
+        },
+        {
+          "name": "Atualizar quantidade",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/cart/items/<itemId>",
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 3\n}" }
+          }
+        },
+        { "name": "Remover item", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/cart/items/<itemId>" } }
+      ]
+    },
+    {
+      "name": "Pedidos",
+      "item": [
+        {
+          "name": "Criar pedido",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('orderId', pm.response.json().id);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$randomUUID}}" }
+            ],
+            "url": "{{baseUrl}}/api/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"paymentMethod\": \"PIX\",\n  \"notes\": \"Sem açúcar\"\n}" }
+          }
+        },
+        { "name": "Meus pedidos", "request": { "method": "GET", "url": "{{baseUrl}}/api/orders/me" } },
+        { "name": "Detalhe pedido", "request": { "method": "GET", "url": "{{baseUrl}}/api/orders/{{orderId}}" } }
+      ]
+    },
+    {
+      "name": "Favoritos",
+      "item": [
+        { "name": "Listar",      "request": { "method": "GET",    "url": "{{baseUrl}}/api/favorites" } },
+        { "name": "Adicionar",   "request": { "method": "POST",   "url": "{{baseUrl}}/api/favorites/{{productId}}" } },
+        { "name": "Remover",     "request": { "method": "DELETE", "url": "{{baseUrl}}/api/favorites/{{productId}}" } }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Criar review",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/reviews",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"rating\": 5,\n  \"comment\": \"Excelente!\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Criar produto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/admin/products",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Cookie Especial\",\n  \"description\": \"Cookie de chocolate com gotas\",\n  \"price\": 6.50,\n  \"categoryId\": \"{{categoryId}}\",\n  \"available\": true,\n  \"stock\": 50\n}" }
+          }
+        },
+        {
+          "name": "Upload imagem produto",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/admin/products/{{productId}}/images?primary=true",
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "file", "type": "file", "src": [] }
+            ] }
+          }
+        },
+        {
+          "name": "Criar categoria",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/admin/categories",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Especiais\",\n  \"slug\": \"especiais\",\n  \"description\": \"Edições especiais\",\n  \"displayOrder\": 5\n}" }
+          }
+        },
+        { "name": "Listar pedidos (admin)", "request": { "method": "GET", "url": "{{baseUrl}}/api/admin/orders" } },
+        {
+          "name": "Atualizar status pedido",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/admin/orders/{{orderId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"PREPARING\"\n}" }
+          }
+        },
+        { "name": "Dashboard stats", "request": { "method": "GET", "url": "{{baseUrl}}/api/admin/dashboard/stats" } },
+        { "name": "Listar usuários",  "request": { "method": "GET", "url": "{{baseUrl}}/api/admin/users" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+CREATE INDEX idx_users_email                ON users(email);
+CREATE INDEX idx_products_category_id       ON products(category_id);
+CREATE INDEX idx_products_active            ON products(active);
+CREATE INDEX idx_orders_user_id             ON orders(user_id);
+CREATE INDEX idx_orders_status              ON orders(status);
+CREATE INDEX idx_orders_created_at          ON orders(created_at);
+CREATE INDEX idx_favorites_user_product     ON favorites(user_id, product_id);
+CREATE INDEX idx_reviews_product            ON reviews(product_id);
+CREATE INDEX idx_refresh_tokens_hash        ON refresh_tokens(token_hash);
+CREATE INDEX idx_refresh_tokens_user        ON refresh_tokens(user_id);
+CREATE INDEX idx_notifications_user_read    ON notifications(user_id, read);
+CREATE INDEX idx_cart_items_cart            ON cart_items(cart_id);
+CREATE INDEX idx_order_items_order          ON order_items(order_id);

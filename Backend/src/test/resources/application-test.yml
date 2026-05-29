@@ -1,0 +1,31 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  security:
+    jwt:
+      secret: test-secret-com-no-minimo-256-bits-para-hs256-usado-apenas-em-testes-cafeteria-api
+      access-token-ttl-minutes: 15
+      refresh-token-ttl-days: 7
+    rate-limit:
+      login-capacity: 100
+      login-refill-minutes: 1
+  cors:
+    allowed-origins:
+      - http://localhost
+  minio:
+    url: http://localhost:9999
+    public-url: http://localhost:9999
+    access-key: test
+    secret-key: testtest
+    bucket: test-bucket
+
+logging:
+  level:
+    org.springframework: WARN
+    com.cafeteria.api: INFO

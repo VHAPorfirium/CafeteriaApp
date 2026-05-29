@@ -1,0 +1,112 @@
+name: cafeteria
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cafeteria-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cafeteria}
+      POSTGRES_USER: ${DB_USER:-cafeteria}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cafeteria}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cafeteria} -d ${DB_NAME:-cafeteria}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cafeteria-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: cafeteria-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-cafeteria}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-cafeteria123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cafeteria-net
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: cafeteria-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-cafeteria} ${MINIO_SECRET_KEY:-cafeteria123};
+      mc mb -p local/${MINIO_BUCKET:-cafeteria-products} || true;
+      mc anonymous set download local/${MINIO_BUCKET:-cafeteria-products};
+      echo 'Bucket cafeteria-products pronto e público para download';
+      exit 0;
+      "
+    networks:
+      - cafeteria-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cafeteria-api:latest
+    container_name: cafeteria-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-cafeteria}
+      DB_USER: ${DB_USER:-cafeteria}
+      DB_PASSWORD: ${DB_PASSWORD:-cafeteria}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-troque-em-producao-com-no-minimo-256-bits-para-hs256-jwt-token-cafeteria-api}
+      MINIO_URL: http://minio:9000
+      MINIO_PUBLIC_URL: http://localhost:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-cafeteria}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-cafeteria123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-cafeteria-products}
+    ports:
+      - "8080:8080"
+    networks:
+      - cafeteria-net
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cafeteria-pgadmin
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cafeteria.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - cafeteria-net
+
+volumes:
+  pgdata:
+  miniodata:
+
+networks:
+  cafeteria-net:
+    driver: bridge
